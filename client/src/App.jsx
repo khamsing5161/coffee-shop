@@ -6,6 +6,7 @@ import Mainlayout from './layout/Mainlayout'
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MenuPage from './layout/MenuPage'
+import CartPage from './layout/CartPage'
 
 
 
@@ -20,6 +21,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Mainlayout />}></Route>
           <Route path="/menu" element={<MenuPage />}></Route>
+          <Route path="/cart" element={<CartPage />}></Route>
           
 
         </Routes>

@@ -18,27 +18,7 @@ function Menu() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* 🔹 Navbar */}
-      <header className="bg-amber-900 text-white px-6 py-4 flex justify-between items-center">
-        <div className="text-xl font-bold">☕ Coffee Time</div>
-        <nav className="space-x-4">
-          <a href="/" className="hover:text-yellow-300">
-            Home
-          </a>
-          <a href="/menu" className="text-yellow-300 font-semibold">
-            Menu
-          </a>
-          <a href="#" className="hover:text-yellow-300">
-            Cart
-          </a>
-          <a href="#" className="hover:text-yellow-300">
-            Orders
-          </a>
-          <a href="#" className="hover:text-yellow-300">
-            Login
-          </a>
-        </nav>
-      </header>
+      
 
       {/* 🔹 Menu Header */}
       <section className="text-center py-10 bg-amber-50">
@@ -78,9 +58,7 @@ function Menu() {
       </section>
 
       {/* 🔹 Footer */}
-      <footer className="bg-amber-900 text-white text-center py-4 mt-auto">
-        <p>© 2025 Coffee Time | Designed by Khamsing</p>
-      </footer>
+      
     </div>
   );
 }
