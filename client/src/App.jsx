@@ -4,6 +4,9 @@ import viteLogo from '/vite.svg'
 import './App.css'
 import Mainlayout from './layout/Mainlayout'
 
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import MenuPage from './layout/MenuPage'
+
 
 
 function App() {
@@ -12,7 +15,15 @@ function App() {
   return (
     
     <>
-      <Mainlayout />
+    
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Mainlayout />}></Route>
+          <Route path="/menu" element={<MenuPage />}></Route>
+          
+
+        </Routes>
+      </BrowserRouter>
     </>
     
   )

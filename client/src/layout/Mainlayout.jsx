@@ -1,10 +1,14 @@
 import React from 'react'
-import Nav from '../components/Nav/Nav'
-
+import Navbar from '../components/Nav/Navbar'
+import Banner from '../components/Banner/Banner'
 function Mainlayout() {
   return (
     <section>
-        <Nav />
+      <>
+        <Navbar/>
+        <Banner/>
+      </>
+        
         
     </section>
   )
