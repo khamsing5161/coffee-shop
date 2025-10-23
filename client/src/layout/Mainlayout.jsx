@@ -8,8 +8,7 @@ function Mainlayout() {
         <Navbar/>
         <Banner/>
       </>
-        
-        
+
     </section>
   )
 }
