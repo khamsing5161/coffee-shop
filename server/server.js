@@ -26,10 +26,26 @@ db.connect((err) => {
 })
 
 app.get('/', (req,res) => {
-    res.query(`SELECT `)
+    const query =  `
+    SELECT 
+        p.product_id,
+        p.product_id,
+        p.name,
+        p.price,
+        p.image
+
+    FROM products AS p
+    `
+    db.query(query, (err, results) => {  // ไม่ต้อง [user_id] ถ้า SQL ไม่มี ?
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json(results);
+  });
 })
 
 
 app.listen(PORT, () => {
-    console.log('server running on port' + PORT )
+    console.log(`✅ Server running at http://localhost:${PORT}`);
 })
