@@ -1,14 +1,14 @@
 import React from 'react'
 import Navbar from '../components/Nav/Navbar'
-import Payment from '../components/payment/payment'
+import History from '../components/History'
 
-function Payment_Page() {
+function Order_History() {
   return (
     <>
         <Navbar />
-        <Payment/>
+        <History />
     </>
   )
 }
 
-export default Payment_Page
+export default Order_History

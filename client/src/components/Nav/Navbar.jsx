@@ -57,7 +57,7 @@ export default function Navbar() {
                   Cart
                 </a>
                 <a
-                  href="#"
+                  href="/payment"
                   className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white"
                 >
                   Payment
