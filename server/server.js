@@ -73,6 +73,56 @@ app.get('/', (req, res) => {
   });
 })
 
+app.get('/menus', (req,res) => {
+  const query = `
+    SELECT 
+        p.product_id,
+        p.name,
+        p.price,
+        p.image
+    FROM products AS p
+  `
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error"});
+    }
+    res.json(results)
+  })
+})
+
+app.get('/results', (req, res) => {
+  const { search_query } = req.query;
+
+  if (!search_query) {
+    return res.status(400).json({ error: "Missing search_query" });
+  }
+
+  const keywords = search_query.trim().split(/\s+/); // แยกคำด้วยช่องว่าง
+  const conditions = keywords.map(() => `p.name LIKE ?`).join(" AND");
+  const values = keywords.map(k => `%${k}%`);
+
+  const query = `
+    SELECT
+      p.product_id,
+      p.name,
+      p.price,
+      p.image,
+      p.description
+    FROM products AS p
+    WHERE ${conditions}
+  `;
+
+  db.query(query, values, (err, results) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    res.json(results);
+  });
+});
+
 app.get('/cart', (req, res) => {
   const userId = req.query.user_id; // หรือจาก req.session.user_id / req.user.id
 

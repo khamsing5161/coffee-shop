@@ -3,6 +3,8 @@ import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 import Mainlayout from './layout/Mainlayout'
+import Searchpage from './layout/Searchpage'
+
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MenuPage from './layout/MenuPage'
@@ -28,6 +30,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Mainlayout />}></Route>
           <Route path="/menu" element={<MenuPage />}></Route>
+          <Route path="/results" element={<Searchpage />}></Route>
           <Route path="/cart" element={<CartPage />}></Route>
           <Route path="/payment" element={<Payment_Page />}></Route>
           <Route path="/orders" element={<Order_History />}></Route>
