@@ -1,12 +1,20 @@
+import axios from "axios";
 import React from "react";
+import { useState } from "react";
+import { useEffect } from "react";
+import { Link } from 'react-router-dom';
+
 
 function Banner() {
-  const menu = [
-    { name: "Espresso", price: "$3.50" },
-    { name: "Cappuccino", price: "$4.00" },
-    { name: "Latte", price: "$4.50" },
-    { name: "Mocha", price: "$5.00" },
-  ];
+
+  const [products, setProducts] = useState([]);
+
+
+  useEffect(() => {
+    axios.get("http://localhost:5000/")
+      .then(res => setProducts(res.data))
+      .catch(err => console.error(err))
+  }, [])
 
   return (
     <>
@@ -28,19 +36,19 @@ function Banner() {
       <section className="flex-1 py-10 px-6 text-center">
         <h2 className="text-2xl font-semibold mb-6">☕ Recommended Menu</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-          {menu.map((item, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-xl shadow-md p-4 hover:scale-105 transition-transform duration-200"
-            >
-              <img
-                src={`https://placehold.co/200x150?text=${item.name}`}
-                alt={item.name}
-                className="rounded-md mb-3"
-              />
-              <h3 className="font-semibold">{item.name}</h3>
-              <p className="text-amber-700">{item.price}</p>
-            </div>
+          {products.map((item, index) => (
+            <Link to={`/products/${item.product_id}`} key={item.id}>
+              <div className="bg-white rounded-xl shadow-md p-4 hover:scale-105 transition-transform duration-200">
+                <img
+                  src={`http://localhost:5000${item.image}`}
+                  alt={item.name}
+                  className="rounded-md mb-3"
+                />
+                <h3 className="font-semibold">{item.name}</h3>
+                <p className="text-amber-700">{item.price} THB</p>
+              </div>
+            </Link>
+
           ))}
         </div>
       </section>

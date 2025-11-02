@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { BellIcon, Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 
+
+
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -63,7 +65,7 @@ export default function Navbar() {
                   Payment
                 </a>
                 <a
-                  href="#"
+                  href="/orders"
                   className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white"
                 >
                   Order History

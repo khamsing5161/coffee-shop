@@ -10,6 +10,10 @@ import CartPage from './layout/CartPage'
 import Payment_Page from './layout/Payment_Page'
 import Order_History from './layout/Order_History'
 import FormSend from './layout/FormSend'
+import Menu_item from './layout/Menu_item'
+import Food_item from './components/food/Food_item'
+
+
 
 
 
@@ -28,6 +32,10 @@ function App() {
           <Route path="/payment" element={<Payment_Page />}></Route>
           <Route path="/orders" element={<Order_History />}></Route>
           <Route path="/form" element={<FormSend />}></Route>
+          <Route path="/item" element={<Menu_item />}></Route>
+          <Route path="/products/:id" element={<Food_item />} />
+
+          
           
 
         </Routes>

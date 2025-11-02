@@ -1,11 +1,17 @@
-import React, { useState } from "react";
+
+import { createContext, useContext, useState, useEffect } from "react";
+import axios from "axios";
+
 
 function CartPage() {
-  const [cartItems, setCartItems] = useState([
-    { id: 1, name: "Espresso", price: 90, qty: 1 },
-    { id: 2, name: "Cappuccino", price: 120, qty: 2 },
-    { id: 3, name: "Latte", price: 110, qty: 1 },
-  ]);
+  const [cartItems, setCartItems] = useState([]);
+
+  useEffect(() => {
+    axios.get("http://localhost:5000/cart")
+      .then(res => setCartItems(res.data))
+      .catch(err => console.error(err))
+  }, [])
+
 
   // คำนวณราคารวมทั้งหมด
   const totalPrice = cartItems.reduce(
@@ -14,15 +20,20 @@ function CartPage() {
   );
 
   // ลบสินค้าออกจากตะกร้า
-  const removeItem = (id) => {
-    setCartItems(cartItems.filter((item) => item.id !== id));
+  const removeItem = (product_id) => {
+    axios.delete(`http://localhost:5000/cart/${product_id}`)
+      .then(() => {
+        setCartItems(cartItems.filter((item) => item.product_id !== product_id));
+      })
+      .catch(err => console.error(err));
   };
 
+
   // ปรับจำนวนสินค้า
-  const updateQty = (id, change) => {
+  const updateQty = (product_id, change) => {
     setCartItems((prev) =>
       prev.map((item) =>
-        item.id === id
+        item.product_id === product_id
           ? { ...item, qty: Math.max(1, item.qty + change) }
           : item
       )
@@ -31,8 +42,8 @@ function CartPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      
-      
+
+
 
       {/* 🔹 Cart Section */}
       <section className="flex-1 px-8 py-10">
@@ -59,20 +70,20 @@ function CartPage() {
 
                   <div className="flex items-center space-x-3">
                     <button
-                      onClick={() => updateQty(item.id, -1)}
+                      onClick={() => updateQty(item.product_id, -1)}
                       className="bg-gray-200 px-3 rounded"
                     >
                       -
                     </button>
                     <span>{item.qty}</span>
                     <button
-                      onClick={() => updateQty(item.id, 1)}
+                      onClick={() => updateQty(item.product_id, 1)}
                       className="bg-gray-200 px-3 rounded"
                     >
                       +
                     </button>
                     <button
-                      onClick={() => removeItem(item.id)}
+                      onClick={() => removeItem(item.product_id)}
                       className="text-red-500 hover:underline ml-3"
                     >
                       Remove
@@ -81,24 +92,26 @@ function CartPage() {
                 </div>
               ))}
             </div>
+
           )}
+          {/* 🔹 Cart Summary */}
+          <div className="text-center mt-8">
+            <h2 className="text-2xl font-semibold">
+              Total: <span className="text-amber-700">{totalPrice}</span> THB
+            </h2>
+            <button
+              onClick={() => alert("Proceeding to checkout 💳")}
+              className="mt-4 bg-amber-700 hover:bg-amber-800 text-white px-6 py-2 rounded-md font-semibold"
+            >
+              Proceed to Checkout 💳
+            </button>
+          </div>
         </div>
 
-        {/* 🔹 Cart Summary */}
-        <div className="text-center mt-8">
-          <h2 className="text-2xl font-semibold">
-            Total: <span className="text-amber-700">{totalPrice}</span> THB
-          </h2>
-          <button
-            onClick={() => alert("Proceeding to checkout 💳")}
-            className="mt-4 bg-amber-700 hover:bg-amber-800 text-white px-6 py-2 rounded-md font-semibold"
-          >
-            Proceed to Checkout 💳
-          </button>
-        </div>
+
       </section>
 
-      
+
     </div>
   );
 }
