@@ -169,21 +169,49 @@ app.delete('/cart/:id', (req, res) => {
   });
 });
 app.post('/cart_input', (req, res) => {
-  const { product_id, qty, price } = req.body;
+  const { user_id, product_id, qty, price } = req.body;
 
-  const query = `
-    INSERT INTO order_items (order_id, product_id, qty, price)
-    VALUES (?, ?, ?, ?)
+  // 1. หา order ที่ยัง pending ของ user
+  const findOrderQuery = `
+    SELECT order_id 
+    FROM orders 
+    WHERE user_id = ? AND status = 'pending' 
+    LIMIT 1
   `;
 
-  const order_id = 1; // สมมุติว่าเป็นตะกร้าของผู้ใช้ที่ยังไม่ชำระเงิน
+  db.query(findOrderQuery, [user_id], (err, rows) => {
+    if (err) return res.status(500).json({ error: "Database error" });
 
-  db.query(query, [order_id, product_id, qty, price], (err, result) => {
-    if (err) {
-      console.error("Database error:", err);
-      return res.status(500).json({ error: "Database error" });
+    let order_id;
+
+    if (rows.length > 0) {
+      // มี order pending อยู่แล้ว
+      order_id = rows[0].order_id;
+      insertItem(order_id);
+    } else {
+      // ไม่มี → สร้าง order ใหม่
+      const createOrderQuery = `
+        INSERT INTO orders (user_id, status, total_price, date)
+        VALUES (?, 'pending', 0, NOW())
+      `;
+      db.query(createOrderQuery, [user_id], (err2, result) => {
+        if (err2) return res.status(500).json({ error: "Database error" });
+        order_id = result.insertId;
+        insertItem(order_id);
+      });
     }
-    res.json({ message: "Item added to cart" });
+
+    // ฟังก์ชัน insert สินค้า
+    function insertItem(order_id) {
+      const insertQuery = `
+        INSERT INTO order_items (order_id, product_id, qty, price)
+        VALUES (?, ?, ?, ?)
+      `;
+      db.query(insertQuery, [order_id, product_id, qty, price], (err3) => {
+        if (err3) return res.status(500).json({ error: "Database error" });
+        res.json({ message: "Item added to cart", order_id });
+      });
+    }
   });
 });
 

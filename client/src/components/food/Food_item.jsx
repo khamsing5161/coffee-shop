@@ -14,14 +14,21 @@ function Food_item() {
       .catch(err => console.error(err));
   }, [id]);
   const addToCart = () => {
-    axios.post('http://localhost:5000/cart_input', {
-      product_id: item.product_id,
-      qty: 1,
-      price: item.price
+  if (!item) return; // ป้องกัน error ถ้า item ยังไม่ถูกโหลด
+
+  const user_id = 1; // หรือดึงจาก context / localStorage
+
+  axios.post("http://localhost:5000/cart_input", {
+    user_id: 4,
+    product_id: item.product_id,
+    qty: 1,
+    price: item.price
+  })
+    .then(res => {
+      alert(res.data.message + " 🛒");
     })
-      .then(() => alert("เพิ่มลงตะกร้าเรียบร้อยแล้ว 🛒"))
-      .catch(err => console.error("Add to cart error:", err));
-  };
+    .catch(err => console.error("Add to cart error:", err));
+};
 
 
 
@@ -31,7 +38,7 @@ function Food_item() {
 
   return (
     <>
-    <Navbar />
+      <Navbar />
       <section className="flex-1 px-8 py-10">
         <h1 className="text-3xl font-bold text-center text-amber-900 mb-8">
           Your Cart 🛒
