@@ -16,7 +16,7 @@ function Food_item() {
   const addToCart = () => {
   if (!item) return; // ป้องกัน error ถ้า item ยังไม่ถูกโหลด
 
-  const user_id = 1; // หรือดึงจาก context / localStorage
+  const user_id = 4; // หรือดึงจาก context / localStorage
 
   axios.post("http://localhost:5000/cart_input", {
     user_id: 4,

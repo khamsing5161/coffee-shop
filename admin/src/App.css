@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+
+#root {
+  width: 100%;
+  height: 800px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}

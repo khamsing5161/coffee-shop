@@ -1,44 +1,62 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 
 function Payment() {
-  // ตัวอย่างรายการสั่งซื้อ (mock data)
-  const [orders] = useState([
-    { id: 1, name: "Espresso", qty: 1, price: 90 },
-    { id: 2, name: "Cappuccino", qty: 2, price: 120 },
-    { id: 3, name: "Latte", qty: 1, price: 110 },
-  ]);
+  const [orders, setOrders] = useState([]);
+  const user_id = 4; // หรือดึงจาก context/localStorage
 
-  // คำนวณราคารวมทั้งหมด
+  // สำหรับเก็บรูปสลิป
+  const [slip, setSlip] = useState(null);
+  const [slipFile, setSlipFile] = useState(null);
+
+  // โหลดข้อมูล Order Summary
+  useEffect(() => {
+    axios
+      .get(`http://localhost:5000/api/Order_Summary?user_id=${user_id}`)
+      .then((res) => setOrders(res.data.items || []))
+      .catch((err) => console.error("Load cart error:", err));
+  }, [user_id]);
+
+  // คำนวณราคารวมทั้งหมด ✅
   const totalAmount = orders.reduce(
     (sum, item) => sum + item.price * item.qty,
     0
   );
 
-  // สำหรับเก็บรูปสลิป
-  const [slip, setSlip] = useState(null);
-
   // เมื่ออัปโหลดสลิป
   const handleSlipUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setSlip(URL.createObjectURL(file));
+      setSlipFile(file); // เก็บไฟล์จริง
+      setSlip(URL.createObjectURL(file)); // preview
     }
   };
 
   // กดยืนยันการชำระเงิน
-  const handlePaymentSubmit = (e) => {
+  const handlePaymentSubmit = async (e) => {
     e.preventDefault();
-    if (!slip) {
+    if (!slipFile) {
       alert("⚠️ Please upload your payment slip!");
       return;
     }
-    alert("✅ Payment confirmed! Thank you for your order ☕");
+
+    const formData = new FormData();
+    formData.append("order_id", orders[0]?.order_id); // ใช้ order_id จาก order summary
+    formData.append("slip_image", slipFile);
+
+    try {
+      const res = await axios.post("http://localhost:5000/api/slip_upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      alert(res.data.message);
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("❌ Upload failed!");
+    }
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      
-
       {/* 🔹 Payment Section */}
       <section className="flex-1 px-6 py-10">
         <h1 className="text-3xl font-bold text-center text-amber-900 mb-4">
@@ -57,11 +75,11 @@ function Payment() {
             <ul className="divide-y">
               {orders.map((item) => (
                 <li
-                  key={item.id}
+                  key={item.product_id}
                   className="flex justify-between py-2 text-gray-700"
                 >
                   <span>
-                    {item.name} x {item.qty}
+                    {item.product_name} x {item.qty}
                   </span>
                   <span>{item.price * item.qty} THB</span>
                 </li>
@@ -118,8 +136,6 @@ function Payment() {
           </div>
         </div>
       </section>
-
-      
     </div>
   );
 }

@@ -1,0 +1,38 @@
+#Dashboard {
+    background-color: #FFF9E9;
+    width: 1280px;
+    height: 1474px;
+    
+}
+
+.title {
+    grid-area: a;
+}
+.show_orders {
+    grid-area: b;
+}
+.popular {
+    grid-area: c;
+}
+.latest_items {
+    grid-area: d;
+
+}
+
+.main_Dashboard {
+    margin-top: 5rem;
+    width: 1280px;
+    /* height: 1474px; */
+    display: grid;
+    justify-content: center;
+    align-items: center;
+    grid-template-areas: 
+    "a a"
+    "b b"
+    "c d"
+    ;
+    gap: 10px 200px;
+    
+
+    
+}

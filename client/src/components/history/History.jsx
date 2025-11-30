@@ -1,36 +1,18 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios"
 
 function History() {
   // ตัวอย่างข้อมูลออร์เดอร์จำลอง (mock data)
   const [orders, setOrders] = useState([]);
-
+  const user_id = 4;
   useEffect(() => {
-    // จำลองการโหลดข้อมูลจากฐานข้อมูล
-    const mockOrders = [
-      {
-        id: "ORD001",
-        date: "2025-10-18",
-        total: 320,
-        status: "Completed",
-        slip: "https://placehold.co/80x80?text=Slip1",
-      },
-      {
-        id: "ORD002",
-        date: "2025-10-19",
-        total: 190,
-        status: "Pending",
-        slip: "https://placehold.co/80x80?text=Slip2",
-      },
-      {
-        id: "ORD003",
-        date: "2025-10-20",
-        total: 250,
-        status: "Completed",
-        slip: "https://placehold.co/80x80?text=Slip3",
-      },
-    ];
-    setOrders(mockOrders);
-  }, []);
+    axios.get(`http://localhost:5000/api/order_history?user_id=${user_id}`)
+      .then(res => setOrders(res.data || []))
+      .catch(err => console.error("Load order history error:",))
+  }, [])
+
+
+  
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -59,12 +41,12 @@ function History() {
             <tbody>
               {orders.map((order) => (
                 <tr
-                  key={order.id}
+                  key={order.payment_id}
                   className="border-b hover:bg-amber-50 transition"
                 >
-                  <td className="py-3 px-4 font-medium">{order.id}</td>
+                  <td className="py-3 px-4 font-medium">{order.order_id}</td>
                   <td className="py-3 px-4">{order.date}</td>
-                  <td className="py-3 px-4">{order.total}</td>
+                  <td className="py-3 px-4">{order.total_price}</td>
                   <td
                     className={`py-3 px-4 font-semibold ${
                       order.status === "Completed"
@@ -76,7 +58,7 @@ function History() {
                   </td>
                   <td className="py-3 px-4">
                     <img
-                      src={order.slip}
+                      src={`http://localhost:5000${order.slip_image}`}
                       alt="Slip"
                       className="w-16 h-16 object-cover rounded-lg shadow"
                     />

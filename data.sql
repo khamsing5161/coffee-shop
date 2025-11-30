@@ -26,7 +26,7 @@ CREATE TABLE orders (
     user_id INT NOT NULL,
     date DATETIME DEFAULT CURRENT_TIMESTAMP,
     total_price DECIMAL(10,2) NOT NULL,
-    status ENUM('pending', 'paid', 'cancelled') DEFAULT 'pending',
+    status ENUM('pending', 'paid','Payment completed', 'cancelled') DEFAULT 'pending',
     FOREIGN KEY (user_id) REFERENCES users(user_id)
         ON UPDATE CASCADE
         ON DELETE CASCADE
