@@ -8,6 +8,7 @@ const axios = require('axios')
 const multer = require("multer");
 const path = require("path");
 
+
 const app = express();
 // ✅ Middleware
 app.use(bodyParser.json());
@@ -522,8 +523,8 @@ app.get("/api/reports/total-sales", (req, res) => {
   });
 });
 
-app.get("/api/reports/total_in_progress", (req,res) => {
-  const sql =`
+app.get("/api/reports/total_in_progress", (req, res) => {
+  const sql = `
     SELECT
       COUNT(order_id) AS total_in_progress
     FROM orders
@@ -537,8 +538,8 @@ app.get("/api/reports/total_in_progress", (req,res) => {
   });
 })
 
-app.get("/api/reports/Waiting_for_payment", (req,res) => {
-  const sql =`
+app.get("/api/reports/Waiting_for_payment", (req, res) => {
+  const sql = `
   SELECT
     COUNT(order_id) AS total_waiting_for_payment
     FROM orders
@@ -550,8 +551,8 @@ app.get("/api/reports/Waiting_for_payment", (req,res) => {
     res.json(result[0]);
   });
 })
-app.get("/api/reports/Payment_completed", (req,res) => {
-  const sql =`
+app.get("/api/reports/Payment_completed", (req, res) => {
+  const sql = `
   SELECT
     COUNT(order_id) AS total_Payment_completed
     FROM orders
@@ -611,21 +612,57 @@ app.delete("/api/products/:id", (req, res) => {
 });
 
 app.put("/api/products/update/:id", upload.single("image"), (req, res) => {
-  const productid = req.params.id;
+  const productId = req.params.id;
   const { name, price, description } = req.body;
-  const image = req.file ? `/uploads/${req.file.filename}` : null;
+  const newImage = req.file ? `/uploads/${req.file.filename}` : null;
 
-  const sql = image
-    ? "UPDATE products SET name = ?, price = ?, description = ?, image = ? WHERE product_id = ?"
-    : "UPDATE products SET name = ?, price = ?, description = ? WHERE product_id = ?";
+  // 1️⃣ ดึงข้อมูลเก่าก่อน (ป้องกันสินค้าไม่พบ)
+  const checkSql = "SELECT image FROM products WHERE product_id = ?";
+  db.query(checkSql, [productId], (err, rows) => {
+    if (err) return res.status(500).json({ error: "Database error", detail: err });
+    if (rows.length === 0)
+      return res.status(404).json({ message: "Product not found" });
 
-  const params = image
-    ? [name, price, description, image, productid]
-    : [name, price, description, productid];
+    const oldImage = rows[0].image;
 
-  db.query(sql, params, (err, result) => {
-    if (err) return res.status(500).json(err);
-    res.json({ message: "update product successfully!" });
+    // 2️⃣ เตรียมคำสั่ง SQL
+    const sql = newImage
+      ? "UPDATE products SET name = ?, price = ?, description = ?, image = ? WHERE product_id = ?"
+      : "UPDATE products SET name = ?, price = ?, description = ? WHERE product_id = ?";
+
+    const params = newImage
+      ? [name, price, description, newImage, productId]
+      : [name, price, description, productId];
+
+    // 3️⃣ อัปเดตข้อมูลในฐานข้อมูล
+    db.query(sql, params, (err, result) => {
+      if (err)
+        return res.status(500).json({ error: "Fail to update product", detail: err });
+
+      // 4️⃣ ลบภาพเก่า (เฉพาะเมื่อมีรูปใหม่)
+      if (newImage && oldImage) {
+        const oldImagePath = path.join(process.cwd(), oldImage);
+
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlink(oldImagePath, (unlinkErr) => {
+            if (unlinkErr) {
+              console.error("⚠️ Failed to delete old image:", unlinkErr);
+            }
+          });
+        }
+      }
+
+      res.json({
+        message: "Product updated successfully!",
+        updatedProduct: {
+          productId,
+          name,
+          price,
+          description,
+          image: newImage || oldImage
+        }
+      });
+    });
   });
 });
 
