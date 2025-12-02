@@ -609,6 +609,26 @@ app.delete("/api/products/:id", (req, res) => {
     res.json({ message: "ลบสินค้าเรียบร้อย!" });
   });
 });
+
+app.put("/api/products/update/:id", upload.single("image"), (req, res) => {
+  const productid = req.params.id;
+  const { name, price, description } = req.body;
+  const image = req.file ? `/uploads/${req.file.filename}` : null;
+
+  const sql = image
+    ? "UPDATE products SET name = ?, price = ?, description = ?, image = ? WHERE product_id = ?"
+    : "UPDATE products SET name = ?, price = ?, description = ? WHERE product_id = ?";
+
+  const params = image
+    ? [name, price, description, image, productid]
+    : [name, price, description, productid];
+
+  db.query(sql, params, (err, result) => {
+    if (err) return res.status(500).json(err);
+    res.json({ message: "update product successfully!" });
+  });
+});
+
 // end
 
 
