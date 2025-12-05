@@ -7,15 +7,25 @@ const cors = require('cors')
 const axios = require('axios')
 const multer = require("multer");
 const path = require("path");
+const jwt = require('jsonwebtoken');
+// const bcrypt = require('bcryptjs')
+import authRoutes from "./routes/auth.js";
+import adminRoutes from "./routes/admin.js";
+import customerRoutes from "./routes/customer.js";
+const bcrypt = require("bcrypt");
+
 
 
 const app = express();
+const router = express.Router();
+const jwt_SECRET = process.env.jwt_SECRET;
 // ✅ Middleware
 app.use(bodyParser.json());
 app.use(cors());              // อนุญาตให้ frontend เรียก backend ได้
 app.use(express.json());      // อ่านข้อมูล JSON จาก body ได้
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 
 
 dotenv.config()
@@ -53,6 +63,16 @@ db.connect((err) => {
     console.log('database connected running')
   }
 })
+
+// API Endpoints
+
+app.use("/api/auth", authRoutes);        // login / register
+app.use("/api/admin", adminRoutes);      // admin only routes
+app.use("/api/customer", customerRoutes); // customer only routes
+
+
+
+
 
 // api go home
 app.get('/', (req, res) => {
@@ -701,13 +721,15 @@ app.put("/api/orders/status/:orderId", (req, res) => {
   const { orderId } = req.params;
   const { status } = req.body;
 
-  const sql = "UPDATE orders SET status = ? WHERE order_id = ?";
+  const sql = "UPDATE payments SET status = ? WHERE order_id = ?";
 
   db.query(sql, [status, orderId], (err, result) => {
     if (err) return res.status(500).json({ error: err });
     res.json({ message: "Status updated", status });
   });
 });
+
+
 
 
 // API Sales report
