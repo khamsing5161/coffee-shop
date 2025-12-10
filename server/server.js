@@ -1,34 +1,78 @@
 const express = require("express")
 const PORT = process.env.PORT || 5000
 const dotenv = require('dotenv')
-const mysql = require('mysql2')
+const mysql = require("mysql2");
 const bodyParser = require('body-parser')
 const cors = require('cors')
 const axios = require('axios')
 const multer = require("multer");
 const path = require("path");
 const jwt = require('jsonwebtoken');
-// const bcrypt = require('bcryptjs')
-import authRoutes from "./routes/auth.js";
-import adminRoutes from "./routes/admin.js";
-import customerRoutes from "./routes/customer.js";
-const bcrypt = require("bcrypt");
+const bcrypt = require('bcryptjs')
+
+const session = require('express-session')
+const fs = require("fs");
 
 
+const { error } = require("console")
+const cookieSession = require("cookie-session");
+
+
+
+// const auth = require("./middleware/auth");
 
 const app = express();
 const router = express.Router();
-const jwt_SECRET = process.env.jwt_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || "myjwtsecretkey";
+const COOKIE_SECRET = process.env.COOKIE_SECRET || "mysecretkey";
 // ✅ Middleware
 app.use(bodyParser.json());
 app.use(cors());              // อนุญาตให้ frontend เรียก backend ได้
 app.use(express.json());      // อ่านข้อมูล JSON จาก body ได้
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use(
+  cookieSession({
+    name: "session",
+    keys: [JWT_SECRET],  // 🔑 ต้องใส่ keys
+    maxAge: 24 * 60 * 60 * 1000 // 1 วัน
+  })
+);
+app.use(session({
+  secret: 'secret',
+  resave: false,
+  saveUninitialized: true
+}))
 
 
 
 dotenv.config()
+
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers['authorization']
+  const token = authHeader && authHeader.split(' ')[1]
+
+  if (token == null) {
+    return res.sendStatus(403)
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+
+    if (err) {
+      return res.sendStatus(403)
+    }
+    req.user = user
+
+    next()
+
+  })
+
+
+}
+
+
+
+
 
 
 
@@ -65,10 +109,96 @@ db.connect((err) => {
 })
 
 // API Endpoints
+app.get("/api/dashboard", verifyToken, (req, res) => {
+  const username = req.user.name
+  res.json({ message: `Welcome to dashboard, ${username}`, user: req.user });
+});
 
-app.use("/api/auth", authRoutes);        // login / register
-app.use("/api/admin", adminRoutes);      // admin only routes
-app.use("/api/customer", customerRoutes); // customer only routes
+// register
+
+app.post('/api/register', async (req, res) => {
+  const { name, email, password } = req.body;
+
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    // ตรวจสอบ email ซ้ำ
+    const [existsSync] = await db
+      .promise()
+      .query("SELECT * FROM users WHERE email = ?", [email]);
+
+    if (existsSync.length > 0) {
+      return res.status(400).json({ error: "Email already in use" });
+    }
+
+    // TODO: continue hashing password...
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // TODO: save to database...
+    await db.promise().query(
+      "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+      [name, email, hashedPassword]
+    );
+
+    res.json({ message: "User registered successfully" });
+
+  } catch (error) {
+    console.error("Registration error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+// end register
+
+// login 
+app.post("/login", (req, res) => {
+  const { email, password } = req.body;
+  try {
+
+
+    const sql = "SELECT * FROM users WHERE email = ?";
+    db.query(sql, [email], async (err, result) => {
+      if (err) return res.status(500).json({ message: "Database error" });
+      if (result.length === 0)
+        return res.status(400).json({ message: "Email not found" });
+
+      const user = result[0];
+
+      // Check password
+      const isValid = await bcrypt.compare(password, user.password);
+      if (!isValid)
+        return res.status(400).json({ message: "Incorrect password" });
+
+      // Create JWT
+      const token = jwt.sign(
+        {
+          user_id: user.user_id,
+          role: user.role
+        },
+        process.env.JWT_SECRET,   // ต้องตรงชื่อ ENV
+        { expiresIn: "1d" }
+      );
+
+      res.json({
+        message: "Login successful",
+        token,
+        role: user.role,
+        user_id: user.user_id,
+        name: user.name
+      });
+    });
+
+  } catch (error) {
+    console.error("login error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+
+});
+
+
+// end login
+
 
 
 
@@ -245,67 +375,105 @@ app.delete('/cart/:id', (req, res) => {
 });
 
 // import product
-app.post('/cart_input', (req, res) => {
-  const { user_id, product_id, qty, price } = req.body;
+app.post('/cart_input', verifyToken, (req, res) => {
+  const { product_id, qty, price } = req.body;
+  const { user_id } = req.user;
 
-  // 1. หา order ที่ยัง pending ของ user
-  const findOrderQuery = `
+  if (!product_id || !qty || !price) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  // 1) หา order pending ของ user
+  const findOrder = `
     SELECT order_id 
     FROM orders 
-    WHERE user_id = ? AND status = 'pending' 
+    WHERE user_id = ? AND status = 'pending'
     LIMIT 1
   `;
 
-  db.query(findOrderQuery, [user_id], (err, rows) => {
+  db.query(findOrder, [user_id], (err, row) => {
     if (err) return res.status(500).json({ error: "Database error" });
 
-    let order_id;
-
-    if (rows.length > 0) {
-      // มี order pending อยู่แล้ว
-      order_id = rows[0].order_id;
-      insertItem(order_id);
+    if (row.length > 0) {
+      // มี order pending
+      addItem(row[0].order_id);
     } else {
-      // ไม่มี → สร้าง order ใหม่
-      const createOrderQuery = `
+      // ไม่มี order → สร้างใหม่
+      const createOrder = `
         INSERT INTO orders (user_id, status, total_price, date)
         VALUES (?, 'pending', 0, NOW())
       `;
-      db.query(createOrderQuery, [user_id], (err2, result) => {
+
+      db.query(createOrder, [user_id], (err2, result) => {
         if (err2) return res.status(500).json({ error: "Database error" });
-        order_id = result.insertId;
-        insertItem(order_id);
-      });
-    }
-
-    // ฟังก์ชัน insert สินค้า
-    function insertItem(order_id) {
-      const insertQuery = `
-      INSERT INTO order_items (order_id, product_id, qty, price)
-      VALUES (?, ?, ?, ?)
-    `;
-      db.query(insertQuery, [order_id, product_id, qty, price], (err3) => {
-        if (err3) return res.status(500).json({ error: "Database error" });
-
-        // อัปเดตราคารวมใหม่
-        const updateTotalQuery = `
-        UPDATE orders
-        SET total_price = (
-          SELECT SUM(oi.qty * oi.price)
-          FROM order_items AS oi
-          WHERE oi.order_id = ?
-        )
-        WHERE order_id = ?
-      `;
-        db.query(updateTotalQuery, [order_id, order_id], (err4) => {
-          if (err4) return res.status(500).json({ error: "Database error" });
-          res.json({ message: "Item added to cart", order_id });
-        });
+        addItem(result.insertId);
       });
     }
   });
+
+  // 2) Add item to order
+  function addItem(order_id) {
+
+    // ⬇ เช็คก่อนว่ามีสินค้าเดิมใน order แล้วหรือยัง
+    const checkItem = `
+      SELECT qty 
+      FROM order_items 
+      WHERE order_id = ? AND product_id = ?
+      LIMIT 1
+    `;
+
+    db.query(checkItem, [order_id, product_id], (err, itemRow) => {
+      if (err) return res.status(500).json({ error: "Database error" });
+
+      if (itemRow.length > 0) {
+        // ถ้ามี → update qty
+        const updateQty = `
+          UPDATE order_items
+          SET qty = qty + ?
+          WHERE order_id = ? AND product_id = ?
+        `;
+
+        db.query(updateQty, [qty, order_id, product_id], (err2) => {
+          if (err2) return res.status(500).json({ error: "Database error" });
+          updateOrderTotal(order_id);
+        });
+
+      } else {
+
+        // ถ้าไม่มี → insert ใหม่
+        const insertItem = `
+          INSERT INTO order_items (order_id, product_id, qty, price)
+          VALUES (?, ?, ?, ?)
+        `;
+
+        db.query(insertItem, [order_id, product_id, qty, price], (err3) => {
+          if (err3) return res.status(500).json({ error: "Database error" });
+          updateOrderTotal(order_id);
+        });
+      }
+    });
+  }
+
+  // 3) Update total price
+  function updateOrderTotal(order_id) {
+    const updateTotal = `
+      UPDATE orders
+      SET total_price = (
+        SELECT SUM(qty * price)
+        FROM order_items
+        WHERE order_id = ?
+      )
+      WHERE order_id = ?
+    `;
+
+    db.query(updateTotal, [order_id, order_id], (err) => {
+      if (err) return res.status(500).json({ error: "Database error" });
+      res.json({ message: "Item added to cart", order_id });
+    });
+  }
 });
-app.put('/cart_update', (req, res) => {
+
+app.put('/cart_update', verifyToken, (req, res) => {
   const { order_id } = req.body;
 
   const updateOrderQuery = `

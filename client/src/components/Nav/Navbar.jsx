@@ -1,10 +1,39 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from 'react-router-dom'
 import { BellIcon, Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import axios from "axios";
+
 
 
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate
+  // const [ userprofile, userprofile ] = useState('loading...')
+  const handlelogout = () => {
+    localStorage.removeItem('token')
+    navigate('/login')
+  }
+
+  // useEffect(() => {
+  //   const frtchNavbardata = async () => {
+  //     const token = localStorage.getItem('token')
+
+  //     if(!token) {
+  //       navigate('/login')
+  //     }
+
+  //     try {
+  //       const response = await axios.get('http://localhost:5000/api/dashboard') {
+        
+  //       }
+  //     } catch(error) {
+  //       console.error('Authentication error', error)
+  //       handlelogout()
+  //     }
+  //   }
+  // })
+
 
   return (
     <nav className="relative bg-gray-800 dark:bg-gray-800/50 dark:after:pointer-events-none dark:after:absolute dark:after:inset-x-0 dark:after:bottom-0 dark:after:h-px dark:after:bg-white/10">
