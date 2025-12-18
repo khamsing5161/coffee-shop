@@ -6,6 +6,8 @@ function Regis() {
   const [name, setName] = React.useState("")
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
+  
+
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -15,11 +17,12 @@ function Regis() {
       const response = await axios.post("http://localhost:5000/api/register", {
         name,
         email,
-        password
+        password,
+        
       })
 
       console.log(response.data)
-      navigate("/login") // Go to login page
+      navigate("/login")
     } catch (error) {
       console.error(error)
       alert("Registration failed")
@@ -53,17 +56,20 @@ function Regis() {
         <input
           type="password"
           placeholder="Password"
-          className="w-full p-2 border rounded mb-4"
+          className="w-full p-2 border rounded mb-3"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
+
+        
 
         <button className="w-full bg-blue-600 text-white p-2 rounded">
           Register
         </button>
 
         <p className="text-center mt-3">
-          Already have an account? <Link to="/login" className="text-blue-600">Login</Link>
+          Already have an account?{" "}
+          <Link to="/login" className="text-blue-600">Login</Link>
         </p>
       </form>
     </div>

@@ -3,139 +3,219 @@ import axios from "axios";
 
 function Payment() {
   const [orders, setOrders] = useState([]);
-  const user_id = 4; // หรือดึงจาก context/localStorage
-
-  // สำหรับเก็บรูปสลิป
   const [slip, setSlip] = useState(null);
   const [slipFile, setSlipFile] = useState(null);
 
-  // โหลดข้อมูล Order Summary
+  const token = localStorage.getItem("token");
+
+  const [points, setPoints] = useState(0);
+  const [usePoints, setUsePoints] = useState(0);
+  const [discount, setDiscount] = useState(0);
+  const [finalTotal, setFinalTotal] = useState(0);
+
+  const orderId = orders.length > 0 ? orders[0].order_id : null;
+
+  /* ================= โหลดโปรไฟล์ (คะแนน) ================= */
   useEffect(() => {
     axios
-      .get(`http://localhost:5000/api/Order_Summary?user_id=${user_id}`)
-      .then((res) => setOrders(res.data.items || []))
-      .catch((err) => console.error("Load cart error:", err));
-  }, [user_id]);
+      .get("http://localhost:5000/api/profile", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then((res) => setPoints(res.data.points || 0))
+      .catch((err) => console.error(err));
+  }, [token]);
 
-  // คำนวณราคารวมทั้งหมด ✅
+  /* ================= โหลด Order Summary ================= */
+  const loadOrderSummary = () => {
+    axios
+      .get("http://localhost:5000/api/Order_Summary", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then((res) => setOrders(res.data.items || []))
+      .catch((err) => console.error(err));
+  };
+
+  useEffect(() => {
+    loadOrderSummary();
+  }, []);
+
+  /* ================= รวมราคา ================= */
   const totalAmount = orders.reduce(
     (sum, item) => sum + item.price * item.qty,
     0
   );
 
-  // เมื่ออัปโหลดสลิป
-  const handleSlipUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setSlipFile(file); // เก็บไฟล์จริง
-      setSlip(URL.createObjectURL(file)); // preview
+  /* ตั้งค่า finalTotal เริ่มต้น */
+  useEffect(() => {
+    setFinalTotal(totalAmount);
+  }, [totalAmount]);
+
+  /* ================= ใช้แต้ม ================= */
+  const redeemPoints = async () => {
+    if (!orderId || usePoints <= 0) {
+      alert("❌ กรุณาใส่จำนวนแต้ม");
+      return;
+    }
+
+    if (usePoints > points) {
+      alert("❌ แต้มไม่พอ");
+      return;
+    }
+
+    try {
+      const res = await axios.post(
+        "http://localhost:5000/api/redeem-points",
+        {
+          order_id: orderId,
+          points_used: Number(usePoints)
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      setDiscount(res.data.discount);
+      setFinalTotal(res.data.total_after_discount);
+
+      alert(`🎉 ลดราคา ${res.data.discount} THB`);
+    } catch (err) {
+      console.error(err);
+      alert("❌ ใช้แต้มไม่สำเร็จ");
     }
   };
 
-  // กดยืนยันการชำระเงิน
+  /* ================= อัปโหลดสลิป ================= */
+  const handleSlipUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSlipFile(file);
+      setSlip(URL.createObjectURL(file));
+    }
+  };
+
+  /* ================= ยืนยันการชำระเงิน ================= */
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
-    if (!slipFile) {
-      alert("⚠️ Please upload your payment slip!");
+
+    if (!slipFile || !orderId) {
+      alert("⚠️ กรุณาอัปโหลดสลิป");
       return;
     }
 
     const formData = new FormData();
-    formData.append("order_id", orders[0]?.order_id); // ใช้ order_id จาก order summary
+    formData.append("order_id", orderId);
     formData.append("slip_image", slipFile);
 
     try {
-      const res = await axios.post("http://localhost:5000/api/slip_upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const res = await axios.post(
+        "http://localhost:5000/api/slip_upload",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
       alert(res.data.message);
     } catch (err) {
-      console.error("Upload error:", err);
-      alert("❌ Upload failed!");
+      console.error(err);
+      alert("❌ Upload failed");
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* 🔹 Payment Section */}
-      <section className="flex-1 px-6 py-10">
-        <h1 className="text-3xl font-bold text-center text-amber-900 mb-4">
-          💳 Payment Confirmation
-        </h1>
-        <p className="text-center text-gray-600 mb-8">
-          Please review your order and complete your payment below.
-        </p>
+    <div className="min-h-screen bg-gray-50 px-6 py-10">
+      <h1 className="text-3xl font-bold text-center text-amber-900 mb-6">
+        💳 Payment Confirmation
+      </h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          {/* 🔸 Order Summary */}
-          <div className="bg-white shadow-md rounded-xl p-6">
-            <h2 className="text-xl font-semibold mb-4 text-amber-900">
-              🧾 Order Summary
-            </h2>
-            <ul className="divide-y">
-              {orders.map((item) => (
-                <li
-                  key={item.product_id}
-                  className="flex justify-between py-2 text-gray-700"
-                >
-                  <span>
-                    {item.product_name} x {item.qty}
-                  </span>
-                  <span>{item.price * item.qty} THB</span>
-                </li>
-              ))}
-            </ul>
-            <h3 className="mt-4 text-lg font-bold text-amber-700">
+      <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        {/* ================= Order Summary ================= */}
+        <div className="bg-white p-6 rounded-xl shadow">
+          <h2 className="text-xl font-semibold mb-4">🧾 Order Summary</h2>
+
+          <ul className="divide-y">
+            {orders.map((item) => (
+              <li key={item.product_id} className="flex justify-between py-2">
+                <span>
+                  {item.product_name} x {item.qty}
+                </span>
+                <span>{item.price * item.qty} THB</span>
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-4">Subtotal: {totalAmount} THB</p>
+
+          {discount > 0 && (
+            <>
+              <p className="text-green-600">
+                Discount: -{discount} THB
+              </p>
+              <p className="text-xl font-bold text-red-600">
+                ต้องชำระจริง: {finalTotal} THB
+              </p>
+            </>
+          )}
+
+          {discount === 0 && (
+            <p className="text-xl font-bold text-amber-700">
               Total: {totalAmount} THB
-            </h3>
-          </div>
+            </p>
+          )}
+        </div>
 
-          {/* 🔸 Payment Details */}
-          <div className="bg-white shadow-md rounded-xl p-6">
-            <h2 className="text-xl font-semibold mb-4 text-amber-900">
-              🏦 Payment Information
-            </h2>
-            <p>Account Name: <strong>Coffee Time Co.</strong></p>
-            <p>Bank: <strong>Bangkok Bank</strong></p>
-            <p>Account Number: <strong>123-456-7890</strong></p>
-            <p className="mt-3">Or scan QR code:</p>
-            <img
-              src="https://placehold.co/150x150?text=QR+Code"
-              alt="QR Code"
-              className="my-3 rounded-md shadow-md mx-auto"
+        {/* ================= Payment ================= */}
+        <div className="bg-white p-6 rounded-xl shadow">
+          <h2 className="text-xl font-semibold mb-4">🏦 Payment</h2>
+
+          <form onSubmit={handlePaymentSubmit} className="space-y-4">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleSlipUpload}
+              required
             />
 
-            <form
-              onSubmit={handlePaymentSubmit}
-              className="flex flex-col gap-4 mt-4"
-            >
-              <label className="font-medium text-gray-700">
-                Upload Payment Slip:
-              </label>
+            <div className="border p-4 rounded">
+              <p>⭐ คะแนนของคุณ: {points}</p>
+
               <input
-                type="file"
-                accept="image/*"
-                onChange={handleSlipUpload}
-                className="border border-gray-300 rounded-md p-2"
-                required
+                type="number"
+                min="0"
+                max={points}
+                value={usePoints}
+                onChange={(e) => setUsePoints(Number(e.target.value))}
+                className="border p-2 rounded w-full my-2"
+                placeholder="ใส่จำนวนแต้ม"
               />
-              {slip && (
-                <img
-                  src={slip}
-                  alt="Slip Preview"
-                  className="w-40 mx-auto rounded-lg shadow"
-                />
-              )}
+
               <button
-                type="submit"
-                className="bg-amber-700 hover:bg-amber-800 text-white py-2 rounded-md font-semibold"
+                type="button"
+                onClick={redeemPoints}
+                disabled={points === 0}
+                className={`w-full py-2 rounded text-white ${
+                  points === 0 ? "bg-gray-400" : "bg-amber-600"
+                }`}
               >
-                ✅ Confirm Payment
+                ใช้แต้มแลกส่วนลด
               </button>
-            </form>
-          </div>
+            </div>
+
+            {slip && (
+              <img
+                src={slip}
+                alt="Slip"
+                className="w-40 mx-auto rounded shadow"
+              />
+            )}
+
+            <button
+              type="submit"
+              className="w-full bg-amber-700 text-white py-2 rounded"
+            >
+              ✅ Confirm Payment
+            </button>
+          </form>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

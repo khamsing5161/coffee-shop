@@ -3,47 +3,60 @@ import axios from "axios";
 
 function CartPage() {
   const [cartItems, setCartItems] = useState([]);
-  const user_id = 4; // หรือดึงจาก context/localStorage
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/cart?user_id=${user_id}`)
-      .then(res => setCartItems(res.data.items || []))
-      .catch(err => console.error("Load cart error:", err));
-  }, []);
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
-  const updateOrderStatus = (order_id) => {
-    axios.put(`http://localhost:5000/cart_update`, {
-      user_id: user_id,
-      order_id: order_id,
-      status: 'paid'
+    axios.get("http://localhost:5000/cart", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
     })
       .then(res => {
-        alert(res.data.message);
+        setCartItems(res.data.items);
+        setTotal(res.data.total_price);
       })
-      .catch(err => console.error("Update order status error:"))
-    };
+      .catch(err => console.error("Load cart error:", err));
+  }, []);
 
   const totalPrice = cartItems.reduce(
     (sum, item) => sum + item.price * item.qty,
     0
   );
 
+  // ---------------------------
+  // REMOVE ITEM
+  // ---------------------------
   const removeItem = (product_id) => {
-    axios.delete(`http://localhost:5000/cart/${product_id}?user_id=${user_id}`)
+    axios.delete(`http://localhost:5000/cart/${product_id}`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`
+      }
+    })
       .then(() => {
         setCartItems(cartItems.filter((item) => item.product_id !== product_id));
       })
       .catch(err => console.error(err));
   };
 
-  const updateQty = (product_id, change) => {
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.product_id === product_id
-          ? { ...item, qty: Math.max(1, item.qty + change) }
-          : item
-      )
-    );
+  // ---------------------------
+  // UPDATE ORDER TO PAID
+  // ---------------------------
+  const updateOrderStatus = (order_id) => {
+    axios.put("http://localhost:5000/cart_update",
+      { order_id: cartItems[0].order_id },
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`
+        }
+      }
+    )
+      .then(res => {
+        alert(res.data.message);
+      })
+      .catch(err => console.error("Update order status error:", err));
   };
 
   return (
@@ -54,6 +67,7 @@ function CartPage() {
         </h1>
 
         <div className="max-w-3xl mx-auto bg-white shadow-md rounded-xl p-6">
+
           {cartItems.length === 0 ? (
             <p className="text-center text-gray-500">Your cart is empty ☕</p>
           ) : (
@@ -70,27 +84,12 @@ function CartPage() {
                     <p className="text-gray-500">{item.price} THB</p>
                   </div>
 
-                  <div className="flex items-center space-x-3">
-                    <button
-                      onClick={() => updateQty(item.product_id, -1)}
-                      className="bg-gray-200 px-3 rounded"
-                    >
-                      -
-                    </button>
-                    <span>{item.qty}</span>
-                    <button
-                      onClick={() => updateQty(item.product_id, 1)}
-                      className="bg-gray-200 px-3 rounded"
-                    >
-                      +
-                    </button>
-                    <button
-                      onClick={() => removeItem(item.product_id)}
-                      className="text-red-500 hover:underline ml-3"
-                    >
-                      Remove
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => removeItem(item.product_id)}
+                    className="text-red-500 hover:underline ml-3"
+                  >
+                    Remove
+                  </button>
                 </div>
               ))}
             </div>
@@ -100,13 +99,15 @@ function CartPage() {
             <h2 className="text-2xl font-semibold">
               Total: <span className="text-amber-700">{totalPrice}</span> THB
             </h2>
-            <button
-              onClick= {() => updateOrderStatus(cartItems[0].order_id)}
-              className="mt-4 bg-amber-700 hover:bg-amber-800 text-white px-6 py-2 rounded-md font-semibold"
-            >
-              <a href="/payment">Proceed to Checkout 💳</a>
-              
-            </button>
+
+            {cartItems.length > 0 && (
+              <button
+                onClick={() => updateOrderStatus(cartItems[0].order_id)}
+                className="mt-4 bg-amber-700 hover:bg-amber-800 text-white px-6 py-2 rounded-md font-semibold"
+              >
+                <a href="/payment">Proceed to Checkout 💳</a>
+              </button>
+            )}
           </div>
         </div>
       </section>

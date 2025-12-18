@@ -198,6 +198,165 @@ app.post("/login", (req, res) => {
 
 
 // end login
+app.post(
+  "/api/register/user_profiles",
+  verifyToken,
+  upload.single("profile_image"),
+  (req, res) => {
+    const { user_id } = req.user;
+    const { phone, address, gender, birthdate } = req.body;
+
+    if (!phone || !address || !gender || !birthdate) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const profile_image = req.file
+      ? `/uploads/${req.file.filename}`
+      : null;
+
+    const checkSql = `
+      SELECT user_id FROM user_profiles WHERE user_id = ?
+    `;
+
+    db.query(checkSql, [user_id], (err, rows) => {
+      if (err) return res.status(500).json({ error: "Database error" });
+      if (rows.length > 0) {
+        return res.status(400).json({ error: "Profile already exists" });
+      }
+
+      const insertSql = `
+        INSERT INTO user_profiles
+        (user_id, profile_image, phone, address, gender, birthdate)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `;
+
+      db.query(
+        insertSql,
+        [user_id, profile_image, phone, address, gender, birthdate],
+        (err2) => {
+          if (err2) {
+            console.error(err2);
+            return res.status(500).json({ error: "Database error" });
+          }
+
+          res.json({ message: "✅ Profile created successfully" });
+        }
+      );
+    });
+  }
+);
+
+
+
+app.get("/api/profile", verifyToken, (req, res) => {
+  const { user_id } = req.user;
+
+  const sql = `
+    SELECT 
+      pf.user_id,
+      pf.profile_image,
+      pf.phone,
+      pf.address,
+      pf.gender,
+      pf.birthdate,
+      pf.points,
+
+      u.name,
+      u.email
+    FROM user_profiles AS pf
+    JOIN users AS u ON pf.user_id = u.user_id
+    WHERE pf.user_id = ?
+  `;
+
+  db.query(sql, [user_id], (err, results) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    // 🔴 ยังไม่มี profile
+    if (results.length === 0) {
+      // Option A: Return default empty profile
+      return res.json({
+        user_id,
+        profile_image: null,
+        phone: null,
+        address: null,
+        gender: null,
+        birthdate: null,
+        points: 0,
+        name: null,
+        email: null
+      });
+
+      // OR Option B: Auto-create profile
+      // (requires separate logic)
+    }
+
+    // ✅ มี profile
+    res.json(results[0]);
+  });
+});
+
+
+
+
+
+
+
+app.put(
+  "/api/profile",
+  verifyToken,
+  upload.single("profile_image"),
+  (req, res) => {
+    const { user_id } = req.user;
+    const { phone, address, gender, birthdate } = req.body;
+
+    const fields = [];
+    const values = [];
+
+    if (phone) {
+      fields.push("phone=?");
+      values.push(phone);
+    }
+    if (address) {
+      fields.push("address=?");
+      values.push(address);
+    }
+    if (gender) {
+      fields.push("gender=?");
+      values.push(gender);
+    }
+    if (birthdate) {
+      fields.push("birthdate=?");
+      values.push(birthdate);
+    }
+    if (req.file) {
+      fields.push("profile_image=?");
+      values.push(`/uploads/${req.file.filename}`);
+    }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: "No data to update" });
+    }
+
+    const sql = `
+      UPDATE user_profiles
+      SET ${fields.join(", ")}
+      WHERE user_id=?
+    `;
+
+    values.push(user_id);
+
+    db.query(sql, values, (err) => {
+      if (err) return res.status(500).json({ error: "Database error" });
+      res.json({ message: "✅ Profile updated successfully" });
+    });
+  }
+);
+
+
+
 
 
 
@@ -318,35 +477,34 @@ app.get('/results', (req, res) => {
 
 // api cart
 
-app.get('/cart', (req, res) => {
-  const userId = req.query.user_id; // เช่น /cart?user_id=1
+app.get('/cart', verifyToken, (req, res) => {
+  const { user_id } = req.user;  // ✔️ ดึงจาก token อย่างปลอดภัย
 
   const query = `
     SELECT 
-    p.product_id,
-    p.name AS product_name,
-    p.price,
-    oi.qty,
-    (oi.qty * p.price) AS item_total,
-    o.total_price,
-    o.order_id
-  FROM orders AS o
-  JOIN order_items AS oi ON o.order_id = oi.order_id
-  JOIN products AS p ON oi.product_id = p.product_id
-  WHERE o.user_id = ? AND o.status = 'pending';
+      p.product_id,
+      p.name AS product_name,
+      p.price,
+      oi.qty,
+      (oi.qty * p.price) AS item_total,
+      o.total_price,
+      o.order_id
+    FROM orders AS o
+    JOIN order_items AS oi ON o.order_id = oi.order_id
+    JOIN products AS p ON oi.product_id = p.product_id
+    WHERE o.user_id = ? AND o.status = 'pending';
   `;
 
-  db.query(query, [userId], (err, results) => {
+  db.query(query, [user_id], (err, results) => {
     if (err) {
       console.error("Database error:", err);
       return res.status(500).json({ error: "Database error" });
     }
 
-    // คำนวณ total
     const total_price = results.reduce((sum, item) => sum + item.item_total, 0);
 
     res.json({
-      user_id: parseInt(userId),
+      user_id,
       items: results,
       total_price
     });
@@ -354,9 +512,9 @@ app.get('/cart', (req, res) => {
 });
 
 // delete product
-app.delete('/cart/:id', (req, res) => {
+app.delete('/cart/:id', verifyToken, (req, res) => {
   const product_id = req.params.id;
-  const user_id = req.query.user_id; // เช่น /cart/2?user_id=1
+  const { user_id } = req.user;
 
   const deleteQuery = `
     DELETE oi
@@ -474,21 +632,31 @@ app.post('/cart_input', verifyToken, (req, res) => {
 });
 
 app.put('/cart_update', verifyToken, (req, res) => {
-  const { order_id } = req.body;
+  const { order_id } = req.body;     // ✔ ดึง order_id ที่ส่งมาจาก frontend
+  const { user_id } = req.user;      // ✔ ดึง user_id จาก token
 
   const updateOrderQuery = `
     UPDATE orders
     SET status = 'paid'
-    WHERE order_id = ?
-    `;
-  db.query(updateOrderQuery, [order_id], (err) => {
+    WHERE order_id = ? AND user_id = ?
+  `;
+
+  db.query(updateOrderQuery, [order_id, user_id], (err, result) => {
     if (err) {
       console.error("Database error:", err);
       return res.status(500).json({ error: "Database error" });
     }
+
+    if (result.affectedRows === 0) {
+      return res.status(403).json({
+        error: "Not allowed — this order does not belong to you"
+      });
+    }
+
     res.json({ message: "Order status updated to paid" });
   });
 });
+
 
 // end cart
 
@@ -553,8 +721,8 @@ app.post('/orders', (req, res) => {
 
 // api Payment Confirmation
 
-app.get('/api/Order_Summary', (req, res) => {
-  const userId = req.query.user_id; // เช่น /cart?user_id=1
+app.get('/api/Order_Summary', verifyToken, (req, res) => {
+  const { user_id } = req.user;   // เช่น /cart?user_id=1
 
   const query = `
     SELECT 
@@ -571,7 +739,7 @@ app.get('/api/Order_Summary', (req, res) => {
   WHERE o.user_id = ? AND o.status = 'paid';
   `;
 
-  db.query(query, [userId], (err, results) => {
+  db.query(query, [user_id], (err, results) => {
     if (err) {
       console.error("Database error:", err);
       return res.status(500).json({ error: "Database error" });
@@ -581,7 +749,7 @@ app.get('/api/Order_Summary', (req, res) => {
     const total_price = results.reduce((sum, item) => sum + item.item_total, 0);
 
     res.json({
-      user_id: parseInt(userId),
+      user_id,
       items: results,
       total_price
     });
@@ -618,13 +786,138 @@ app.post("/api/slip_upload", upload.single("slip_image"), (req, res) => {
   });
 });
 
+app.post("/api/redeem-points", verifyToken, (req, res) => {
+  const { user_id } = req.user;
+  const { order_id, points_used } = req.body;
+
+  if (!order_id || points_used <= 0) {
+    return res.status(400).json({ error: "Invalid data" });
+  }
+
+  const rate = 1000; // ✅ 1 point = 1 THB
+  const discount = points_used * rate;
+
+  const sqlOrder = `
+    SELECT total_price, discount_amount
+    FROM orders
+    WHERE order_id = ? AND user_id = ?
+  `;
+
+  const sqlProfile = `
+    SELECT points
+    FROM user_profiles
+    WHERE user_id = ?
+  `;
+
+  db.beginTransaction((err) => {
+    if (err) return res.status(500).json({ error: "Transaction error" });
+
+    // 1️⃣ ตรวจสอบ Order
+    db.query(sqlOrder, [order_id, user_id], (err, orderResult) => {
+      if (err || orderResult.length === 0) {
+        return db.rollback(() =>
+          res.status(404).json({ error: "Order not found" })
+        );
+      }
+
+      const { total_price, discount_amount } = orderResult[0];
+
+      if (discount_amount > 0) {
+        return db.rollback(() =>
+          res.status(400).json({ error: "Points already redeemed" })
+        );
+      }
+
+      if (discount > total_price) {
+        return db.rollback(() =>
+          res.status(400).json({ error: "Discount exceeds total" })
+        );
+      }
+
+      // 2️⃣ ตรวจสอบแต้มผู้ใช้
+      db.query(sqlProfile, [user_id], (err, profileResult) => {
+        if (err || profileResult.length === 0) {
+          return db.rollback(() =>
+            res.status(404).json({ error: "Profile not found" })
+          );
+        }
+
+        const userPoints = profileResult[0].points;
+
+        if (points_used > userPoints) {
+          return db.rollback(() =>
+            res.status(400).json({ error: "Not enough points" })
+          );
+        }
+
+        const updateOrder = `
+          UPDATE orders
+          SET 
+            discount_amount = ?,
+            total_after_discount = total_price - ?,
+            points_used = ?
+          WHERE order_id = ?
+        `;
+
+        const updateProfile = `
+          UPDATE user_profiles
+          SET points = points - ?
+          WHERE user_id = ?
+        `;
+
+        // 3️⃣ UPDATE orders
+        db.query(
+          updateOrder,
+          [discount, discount, points_used, order_id],
+          (err) => {
+            if (err) {
+              return db.rollback(() =>
+                res.status(500).json({ error: "Update order failed" })
+              );
+            }
+
+            // 4️⃣ UPDATE points
+            db.query(updateProfile, [points_used, user_id], (err) => {
+              if (err) {
+                return db.rollback(() =>
+                  res.status(500).json({ error: "Update points failed" })
+                );
+              }
+
+              // ✅ Commit
+              db.commit((err) => {
+                if (err) {
+                  return db.rollback(() =>
+                    res.status(500).json({ error: "Commit failed" })
+                  );
+                }
+
+                res.json({
+                  discount,
+                  total_after_discount: total_price - discount,
+                  points_left: userPoints - points_used
+                });
+              });
+            });
+          }
+        );
+      });
+    });
+  });
+});
+
+
+
+
+
 // end payment Confirmations
 
 
 // API order History
 
-app.get('/api/order_history', (req, res) => {
-  const userId = req.query.user_id;
+app.get('/api/order_history', verifyToken, (req, res) => {
+  const { user_id } = req.user;
+
   const query = `
     SELECT
       p.payment_id,
@@ -632,22 +925,25 @@ app.get('/api/order_history', (req, res) => {
       p.date,
       p.status,
       p.slip_image,
-      o.total_price
+      o.total_price,
+      o.discount_amount,
+      o.total_after_discount
     FROM payments AS p
     JOIN orders AS o ON p.order_id = o.order_id
     WHERE o.user_id = ?
     ORDER BY p.date DESC
   `;
 
-  // สมมติว่าคุณใช้ mysql2 หรือ mysql library
-  db.query(query, [userId], (err, results) => {
+  db.query(query, [user_id], (err, results) => {
     if (err) {
-      console.error(err);
-      return res.status(500).json({ error: 'Database query failed' });
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database query failed" });
     }
+
     res.json(results);
   });
 });
+
 
 // end order History
 

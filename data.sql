@@ -58,3 +58,20 @@ CREATE TABLE payments (
         ON UPDATE CASCADE
         ON DELETE CASCADE
 );
+
+CREATE TABLE user_profiles (
+    profile_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    phone VARCHAR(20),
+    address TEXT,
+    gender ENUM('male', 'female', 'other'),
+    birthdate DATE,
+    points INT DEFAULT 0,          -- คะแนนสะสมสมาชิก (ถ้าต้องการ)
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+);
+

@@ -14,10 +14,10 @@ import Menu_item from './layout/Menu_item'
 import Food_item from './components/food/Food_item'
 import Login from './layout/Login'
 import Register from './layout/Register';
-
-// ✅ เพิ่มบรรทัดนี้
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { AdminRoute } from "./auth/AdminRoute";
+import ProfilePage from './layout/ProfilePage';
+import ProfileRegister from './layout/Profileregister';
 
 function App() {
   return (
@@ -97,6 +97,23 @@ function App() {
           element={
             <ProtectedRoute>
               <Food_item />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/profile-register"
+          element={
+            <ProtectedRoute>
+              <ProfileRegister />
             </ProtectedRoute>
           }
         />
