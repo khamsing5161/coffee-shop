@@ -5,12 +5,14 @@ import Dashboard from "./layout/dashboard/Dashboard";
 import ManageProducts from "./layout/manage_products/Manage_products";
 import OrdersPage from "./layout/ordersPage/OrdersPage";
 import SalesReport from "./layout/sales_report/Sales_report";
+import Login from "./layout/login/Login";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Dashboard />} /> 
+        <Route path="/" element={<Login />} /> 
+        <Route path="/login" element={<Login />} /> 
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/manage-products" element={<ManageProducts />} />
         <Route path="/manage-orders" element={<OrdersPage />} />

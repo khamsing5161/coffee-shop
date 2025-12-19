@@ -1,6 +1,8 @@
 import React from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
+import Navbar from '../components/Nav/Navbar'
 
 function ProfilePage() {
   const [profile, setProfile] = React.useState(null)
@@ -52,6 +54,7 @@ function ProfilePage() {
   // Success - render profile
   return (
     <>
+    <Navbar />
       <div className="min-h-screen bg-amber-50 flex justify-center items-start p-6">
         <div className="bg-white w-full max-w-xl p-6 rounded-xl shadow-lg">
           <h2 className="text-2xl font-bold text-center text-amber-800 mb-6">
@@ -79,6 +82,7 @@ function ProfilePage() {
             <p className="text-gray-600">{profile.gender}</p>
             <p className="text-gray-600">{profile.address}</p>
             <p className="text-gray-600">{profile.points}</p>
+            <p className="text-gray-600"><Link to="/profile-register">profile register</Link></p>
             
           </div>
         </div>
