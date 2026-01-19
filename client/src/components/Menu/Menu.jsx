@@ -7,7 +7,11 @@ function Menu() {
   const [Menu, setMenu] = useState([]);
 
   useEffect(() => {
-    axios.get("http://localhost:5000/menus")
+    axios.get("http://localhost:5000/menus",{
+      headers:{
+        Authorization: `Bearer ${localStorage.getItem("token")}`
+      }
+    })
       .then(res => setMenu(res.data))
       .catch(err => console.error(err));
   }, []);

@@ -5,38 +5,40 @@ function Payment() {
   const [orders, setOrders] = useState([]);
   const [slip, setSlip] = useState(null);
   const [slipFile, setSlipFile] = useState(null);
-
-  const token = localStorage.getItem("token");
-
   const [points, setPoints] = useState(0);
   const [usePoints, setUsePoints] = useState(0);
   const [discount, setDiscount] = useState(0);
   const [finalTotal, setFinalTotal] = useState(0);
 
+  const token = localStorage.getItem("token");
   const orderId = orders.length > 0 ? orders[0].order_id : null;
 
   /* ================= โหลดโปรไฟล์ (คะแนน) ================= */
   useEffect(() => {
     axios
       .get("http://localhost:5000/api/profile", {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => setPoints(res.data.points || 0))
       .catch((err) => console.error(err));
   }, [token]);
 
   /* ================= โหลด Order Summary ================= */
-  const loadOrderSummary = () => {
-    axios
-      .get("http://localhost:5000/api/Order_Summary", {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      .then((res) => setOrders(res.data.items || []))
-      .catch((err) => console.error(err));
+  const loadOrderSummary = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/Order_Summary", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setOrders(res.data.items || []);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   useEffect(() => {
     loadOrderSummary();
+    const interval = setInterval(loadOrderSummary, 1000); // โหลดใหม่ทุก 1 วิ
+    return () => clearInterval(interval);
   }, []);
 
   /* ================= รวมราคา ================= */
@@ -45,7 +47,6 @@ function Payment() {
     0
   );
 
-  /* ตั้งค่า finalTotal เริ่มต้น */
   useEffect(() => {
     setFinalTotal(totalAmount);
   }, [totalAmount]);
@@ -65,18 +66,12 @@ function Payment() {
     try {
       const res = await axios.post(
         "http://localhost:5000/api/redeem-points",
-        {
-          order_id: orderId,
-          points_used: Number(usePoints)
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { order_id: orderId, points_used: Number(usePoints) },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       setDiscount(res.data.discount);
       setFinalTotal(res.data.total_after_discount);
-
       alert(`🎉 ลดราคา ${res.data.discount} THB`);
     } catch (err) {
       console.error(err);
@@ -96,7 +91,6 @@ function Payment() {
   /* ================= ยืนยันการชำระเงิน ================= */
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
-
     if (!slipFile || !orderId) {
       alert("⚠️ กรุณาอัปโหลดสลิป");
       return;
@@ -110,7 +104,12 @@ function Payment() {
       const res = await axios.post(
         "http://localhost:5000/api/slip_upload",
         formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
 
       alert(res.data.message);
@@ -120,6 +119,7 @@ function Payment() {
     }
   };
 
+  /* ================= Render ================= */
   return (
     <div className="min-h-screen bg-gray-50 px-6 py-10">
       <h1 className="text-3xl font-bold text-center text-amber-900 mb-6">
@@ -127,7 +127,7 @@ function Payment() {
       </h1>
 
       <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-        {/* ================= Order Summary ================= */}
+        {/* Order Summary */}
         <div className="bg-white p-6 rounded-xl shadow">
           <h2 className="text-xl font-semibold mb-4">🧾 Order Summary</h2>
 
@@ -144,25 +144,21 @@ function Payment() {
 
           <p className="mt-4">Subtotal: {totalAmount} THB</p>
 
-          {discount > 0 && (
+          {discount > 0 ? (
             <>
-              <p className="text-green-600">
-                Discount: -{discount} THB
-              </p>
+              <p className="text-green-600">Discount: -{discount} THB</p>
               <p className="text-xl font-bold text-red-600">
                 ต้องชำระจริง: {finalTotal} THB
               </p>
             </>
-          )}
-
-          {discount === 0 && (
+          ) : (
             <p className="text-xl font-bold text-amber-700">
               Total: {totalAmount} THB
             </p>
           )}
         </div>
 
-        {/* ================= Payment ================= */}
+        {/* Payment */}
         <div className="bg-white p-6 rounded-xl shadow">
           <h2 className="text-xl font-semibold mb-4">🏦 Payment</h2>
 

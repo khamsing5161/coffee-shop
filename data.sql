@@ -75,3 +75,23 @@ CREATE TABLE user_profiles (
         ON DELETE CASCADE
 );
 
+CREATE TABLE point_redemptions (
+    redemption_id INT AUTO_INCREMENT PRIMARY KEY,
+    
+    user_id INT NOT NULL,          -- ผู้ใช้ที่ใช้แต้ม
+    order_id INT NOT NULL,         -- ออเดอร์ที่ใช้แต้ม
+    
+    points_used INT NOT NULL,      -- จำนวนแต้มที่ใช้
+    discount_amount DECIMAL(10,2) NOT NULL, -- มูลค่าส่วนลด
+    
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+

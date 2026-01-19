@@ -2,6 +2,12 @@ import React from 'react'
 import './Nav.css'
 
 function Navbar() {
+
+    /* ===== Logout ===== */
+    const handleLogout = () => {
+        localStorage.removeItem("token");
+        navigate("/login");
+    };
     return (
         <header class="absolute inset-x-0 top-0 z-50">
             <nav aria-label="Global" class="flex items-center justify-between p-6 lg:px-8">
@@ -23,13 +29,18 @@ function Navbar() {
                     <a href="/dashboard" class="text-sm/6 font-semibold text-[#FFF9E9]">Dashboard</a>
                     <a href="/manage-products" class="text-sm/6 font-semibold text-[#FFF9E9]">ຈັດການສິນຄ້າ</a>
                     <a href="/manage-orders" class="text-sm/6 font-semibold text-[#FFF9E9]">ກວດສອບອໍເດີ</a>
-                    <a href="#" class="text-sm/6 font-semibold text-[#FFF9E9]">ສະຕ໋ອກວັດຖຸດິບ</a>
-                    <a href="#" class="text-sm/6 font-semibold text-[#FFF9E9]">ຈັດການສະມາຊິກ</a>
+                    {/* <a href="#" class="text-sm/6 font-semibold text-[#FFF9E9]">ສະຕ໋ອກວັດຖຸດິບ</a>
+                    <a href="#" class="text-sm/6 font-semibold text-[#FFF9E9]">ຈັດການສະມາຊິກ</a> */}
                     <a href="/sales-report" class="text-sm/6 font-semibold text-[#FFF9E9]">ຈັດການສະມາຊິກ</a>
 
                 </div>
                 <div class="hidden lg:flex lg:flex-1 lg:justify-end">
-                    <a href="#" class="text-sm/6 font-semibold text-gray-900">Log in <span aria-hidden="true">&rarr;</span></a>
+                    <button
+                        onClick={handleLogout}
+                        className="text-sm text-red-400 hover:text-red-500"
+                    >
+                        Logout
+                    </button>
                 </div>
             </nav>
 

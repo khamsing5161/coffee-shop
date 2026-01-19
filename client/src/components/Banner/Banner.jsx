@@ -11,7 +11,12 @@ function Banner() {
 
 
   useEffect(() => {
-    axios.get("http://localhost:5000/")
+    axios.get("http://localhost:5000/", {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`
+
+      }
+    })
       .then(res => setProducts(res.data))
       .catch(err => console.error(err))
   }, [])
