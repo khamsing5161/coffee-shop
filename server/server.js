@@ -45,7 +45,7 @@ app.use(session({
 }))
 
 app.use(cors({
-  origin: "https://your-frontend.netlify.app",
+  origin: "https://coffee-shop.netlify.app", // URL frontend จริง
   credentials: true
 }));
 
