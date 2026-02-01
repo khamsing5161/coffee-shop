@@ -28,7 +28,7 @@ function Banner() {
         <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg">
           Welcome to Coffee Time
         </h1>
-        <p className="text-lg mb-6">Start your day with your favorite coffee!</p>
+        <p className="text-lg mb-6">Start your. day with your favorite coffee!</p>
         <button
           onClick={() => alert("Explore our menu below 👇")}
           className="bg-yellow-500 hover:bg-yellow-600 text-black px-6 py-2 rounded-md font-semibold"
